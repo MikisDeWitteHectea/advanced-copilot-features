@@ -15,25 +15,11 @@ public class RateLimitingTests
     public async Task GlobalLimiter_WhenLimitIsExceeded_ShouldReturnTooManyRequests()
     {
         await using var factory = new EventRegistrationApiFactory()
-            .WithWebHostBuilder(builder =>
-            {
-                builder.ConfigureServices(services =>
-                {
-                    services.PostConfigure<RateLimiterOptions>(options =>
-                    {
-                        options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(_ =>
-                            RateLimitPartition.GetFixedWindowLimiter(
-                                "test-client",
-                                _ => new FixedWindowRateLimiterOptions
-                                {
-                                    PermitLimit = 2,
-                                    Window = TimeSpan.FromMinutes(1),
-                                    QueueLimit = 0,
-                                    AutoReplenishment = true
-                                }));
-                    });
-                });
-            });
+.WithWebHostBuilder(builder =>
+{
+    builder.UseSetting("RateLimiting:PermitLimit", "2");
+    builder.UseSetting("RateLimiting:WindowSeconds", "60");
+});
         using var client = factory.CreateClient();
 
         (await client.GetAsync("/api/events")).StatusCode.Should().Be(HttpStatusCode.OK);
