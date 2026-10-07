@@ -1,0 +1,146 @@
+@using EventRegistration.UI.Services
+@using EventRegistration.UI.Models
+@inject EventRegistrationApiClient ApiClient
+@rendermode InteractiveServer
+
+@if (capacityInfo == null)
+{
+    <div class="text-center">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    var overallUtilization = capacityInfo.OverallCapacity > 0
+        ? (decimal)capacityInfo.OverallRegistered / capacityInfo.OverallCapacity * 100
+        : 0;
+
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Overall Event Capacity</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span><strong>Total Capacity:</strong> @capacityInfo.OverallCapacity</span>
+                        <span><strong>Registered:</strong> @capacityInfo.OverallRegistered</span>
+                        <span><strong>Available:</strong> @capacityInfo.OverallAvailable</span>
+                    </div>
+                    <div class="progress" style="height: 30px;">
+                        <div class="progress-bar @GetProgressColor(overallUtilization)"
+                             role="progressbar"
+                             style="width: @overallUtilization%"
+                             aria-valuenow="@overallUtilization"
+                             aria-valuemin="0"
+                             aria-valuemax="100">
+                            @overallUtilization.ToString("F1")%
+                        </div>
+                    </div>
+                    @if (capacityInfo.OverallAvailable <= 0)
+                    {
+                        <div class="alert alert-danger mt-3 mb-0">
+                            <i class="bi bi-exclamation-triangle"></i> Event is at full capacity!
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Capacity by Ticket Type</h5>
+                </div>
+                <div class="card-body">
+                    @if (!capacityInfo.TicketTypeCapacities.Any())
+                    {
+                        <p class="text-muted">No ticket types defined yet.</p>
+                    }
+                    else
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Ticket Type</th>
+                                        <th>Capacity</th>
+                                        <th>Registered</th>
+                                        <th>Available</th>
+                                        <th>Utilization</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var ticket in capacityInfo.TicketTypeCapacities)
+                                    {
+                                        var ticketUtilization = ticket.Capacity > 0
+                                            ? (decimal)ticket.Registered / ticket.Capacity * 100
+                                            : 0;
+                                        <tr>
+                                            <td><strong>@ticket.TicketTypeName</strong></td>
+                                            <td>@ticket.Capacity</td>
+                                            <td>@ticket.Registered</td>
+                                            <td>@ticket.Available</td>
+                                            <td>
+                                                <div class="progress" style="height: 25px; min-width: 150px;">
+                                                    <div class="progress-bar @GetProgressColor(ticketUtilization)"
+                                                         role="progressbar"
+                                                         style="width: @ticketUtilization%"
+                                                         aria-valuenow="@ticketUtilization"
+                                                         aria-valuemin="0"
+                                                         aria-valuemax="100">
+                                                        @ticketUtilization.ToString("F1")%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                @if (ticket.Available <= 0)
+                                                {
+                                                    <span class="badge bg-danger">Full</span>
+                                                }
+                                                else if (ticketUtilization >= 80)
+                                                {
+                                                    <span class="badge bg-warning">Almost Full</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-success">Available</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int EventId { get; set; }
+
+    private CapacityResponse? capacityInfo;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCapacity();
+    }
+
+    private async Task LoadCapacity()
+    {
+        capacityInfo = await ApiClient.GetCapacityAsync(EventId);
+    }
+
+    private string GetProgressColor(decimal percentage) => percentage switch
+    {
+        >= 90 => "bg-danger",
+        >= 70 => "bg-warning",
+        _ => "bg-success"
+    };
+}

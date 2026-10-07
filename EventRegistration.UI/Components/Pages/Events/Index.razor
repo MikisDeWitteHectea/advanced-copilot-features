@@ -1,0 +1,129 @@
+@page "/events"
+@using EventRegistration.UI.Services
+@using EventRegistration.UI.Models
+@inject EventRegistrationApiClient ApiClient
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Events</PageTitle>
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Events</h1>
+        <button class="btn btn-primary" @onclick="NavigateToCreate">
+            <i class="bi bi-plus-circle"></i> Create Event
+        </button>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    }
+    else if (events.Count == 0)
+    {
+        <div class="alert alert-info">
+            No events found. Create your first event to get started!
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var ev in events)
+            {
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="card-title mb-0">@ev.Name</h5>
+                        </div>
+                        <div class="card-body">
+                            @if (!string.IsNullOrEmpty(ev.Description))
+                            {
+                                <p class="card-text">@ev.Description</p>
+                            }
+
+                            <ul class="list-unstyled">
+                                <li><strong>Status:</strong> <span class="badge bg-@GetStatusColor(ev.Status)">@ev.Status</span></li>
+                                <li><strong>Start:</strong> @ev.StartDate.ToString("MMM dd, yyyy HH:mm")</li>
+                                <li><strong>End:</strong> @ev.EndDate.ToString("MMM dd, yyyy HH:mm")</li>
+                                <li><strong>Capacity:</strong> @ev.OverallCapacity</li>
+                                @if (!string.IsNullOrEmpty(ev.VenueName))
+                                {
+                                    <li><strong>Venue:</strong> @ev.VenueName</li>
+                                }
+                            </ul>
+                        </div>
+                        <div class="card-footer">
+                            <div class="btn-group w-100" role="group">
+                                <button class="btn btn-sm btn-outline-primary" @onclick="() => NavigateToDetails(ev.Id)">
+                                    <i class="bi bi-eye"></i> View
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteEvent(ev.Id)">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<EventResponse> events = new();
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEvents();
+    }
+
+    private async Task LoadEvents()
+    {
+        isLoading = true;
+        events = await ApiClient.GetEventsAsync();
+        isLoading = false;
+    }
+
+    private void NavigateToCreate()
+    {
+        Navigation.NavigateTo("/events/create");
+    }
+
+    private void NavigateToDetails(int eventId)
+    {
+        Navigation.NavigateTo($"/events/{eventId}");
+    }
+
+    private async Task DeleteEvent(int eventId)
+    {
+        if (confirm($"Are you sure you want to delete this event?"))
+        {
+            try
+            {
+                await ApiClient.DeleteEventAsync(eventId);
+                await LoadEvents();
+            }
+            catch (Exception ex)
+            {
+                // Handle error - could show a toast or alert
+                Console.WriteLine($"Error deleting event: {ex.Message}");
+            }
+        }
+    }
+
+    private static bool confirm(string message) => true; // Placeholder for JS confirm
+
+    private string GetStatusColor(string status) => status switch
+    {
+        "Published" => "success",
+        "Draft" => "secondary",
+        "Cancelled" => "danger",
+        "Completed" => "info",
+        _ => "secondary"
+    };
+}

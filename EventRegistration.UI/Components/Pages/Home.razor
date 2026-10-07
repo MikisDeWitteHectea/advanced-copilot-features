@@ -1,0 +1,84 @@
+﻿@page "/"
+@inject NavigationManager Navigation
+
+<PageTitle>Event Registration System</PageTitle>
+
+<div class="container mt-5">
+    <div class="text-center">
+        <h1 class="display-4">Welcome to Event Registration System</h1>
+        <p class="lead mt-3">Manage your events, ticket types, registrations, and more!</p>
+
+        <div class="row mt-5">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <i class="bi bi-calendar-event" style="font-size: 3rem; color: #0d6efd;"></i>
+                        <h5 class="card-title mt-3">Event Management</h5>
+                        <p class="card-text">Create and manage events with flexible configurations, venues, and scheduling.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <i class="bi bi-ticket" style="font-size: 3rem; color: #0d6efd;"></i>
+                        <h5 class="card-title mt-3">Ticket Types</h5>
+                        <p class="card-text">Set up multiple ticket types with different pricing and capacity limits.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <i class="bi bi-people" style="font-size: 3rem; color: #0d6efd;"></i>
+                        <h5 class="card-title mt-3">Registrations</h5>
+                        <p class="card-text">Track attendee registrations with automatic capacity management and waitlists.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <i class="bi bi-percent" style="font-size: 3rem; color: #0d6efd;"></i>
+                        <h5 class="card-title mt-3">Discount Codes</h5>
+                        <p class="card-text">Create promotional codes with percentage or fixed-amount discounts.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <i class="bi bi-shield" style="font-size: 3rem; color: #0d6efd;"></i>
+                        <h5 class="card-title mt-3">Cancellation Policies</h5>
+                        <p class="card-text">Configure refund policies with tiered deadlines and fees.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <i class="bi bi-download" style="font-size: 3rem; color: #0d6efd;"></i>
+                        <h5 class="card-title mt-3">Export Data</h5>
+                        <p class="card-text">Export attendee data in CSV, Excel, or JSON formats.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-5">
+            <button class="btn btn-primary btn-lg" @onclick="NavigateToEvents">
+                <i class="bi bi-arrow-right-circle"></i> Get Started - View Events
+            </button>
+        </div>
+    </div>
+</div>
+
+@code {
+    private void NavigateToEvents()
+    {
+        Navigation.NavigateTo("/events");
+    }
+}

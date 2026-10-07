@@ -1,0 +1,61 @@
+@using EventRegistration.UI.Models
+
+<div class="card">
+    <div class="card-body">
+        <h3>Event Information</h3>
+        <div class="row">
+            <div class="col-md-6">
+                <dl class="row">
+                    <dt class="col-sm-4">Name:</dt>
+                    <dd class="col-sm-8">@Event.Name</dd>
+
+                    <dt class="col-sm-4">Status:</dt>
+                    <dd class="col-sm-8">
+                        <span class="badge bg-@GetStatusColor(Event.Status)">@Event.Status</span>
+                    </dd>
+
+                    <dt class="col-sm-4">Description:</dt>
+                    <dd class="col-sm-8">@(Event.Description ?? "N/A")</dd>
+
+                    <dt class="col-sm-4">Capacity:</dt>
+                    <dd class="col-sm-8">@Event.OverallCapacity</dd>
+                </dl>
+            </div>
+
+            <div class="col-md-6">
+                <dl class="row">
+                    <dt class="col-sm-4">Start Date:</dt>
+                    <dd class="col-sm-8">@Event.StartDate.ToString("MMM dd, yyyy HH:mm")</dd>
+
+                    <dt class="col-sm-4">End Date:</dt>
+                    <dd class="col-sm-8">@Event.EndDate.ToString("MMM dd, yyyy HH:mm")</dd>
+
+                    <dt class="col-sm-4">Registration Deadline:</dt>
+                    <dd class="col-sm-8">@(Event.RegistrationDeadline?.ToString("MMM dd, yyyy HH:mm") ?? "N/A")</dd>
+
+                    <dt class="col-sm-4">Venue:</dt>
+                    <dd class="col-sm-8">@(Event.VenueName ?? "N/A")</dd>
+
+                    @if (!string.IsNullOrEmpty(Event.VenueAddress))
+                    {
+                        <dt class="col-sm-4">Address:</dt>
+                        <dd class="col-sm-8">@Event.VenueAddress</dd>
+                    }
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public EventResponse Event { get; set; } = null!;
+
+    private string GetStatusColor(string status) => status switch
+    {
+        "Published" => "success",
+        "Draft" => "secondary",
+        "Cancelled" => "danger",
+        "Completed" => "info",
+        _ => "secondary"
+    };
+}

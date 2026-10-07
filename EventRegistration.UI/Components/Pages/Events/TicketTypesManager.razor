@@ -1,0 +1,170 @@
+@using EventRegistration.UI.Services
+@using EventRegistration.UI.Models
+@inject EventRegistrationApiClient ApiClient
+@rendermode InteractiveServer
+
+<div class="mb-4">
+    <button class="btn btn-primary" @onclick="ToggleForm">
+        <i class="bi bi-plus-circle"></i> Add Ticket Type
+    </button>
+</div>
+
+@if (showForm)
+{
+    <div class="card mb-4">
+        <div class="card-header">New Ticket Type</div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Name *</label>
+                    <input class="form-control" @bind="newTicket.Name" placeholder="e.g., Early Bird" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Price *</label>
+                    <input type="number" step="0.01" class="form-control" @bind="newTicket.Price" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Capacity *</label>
+                    <input type="number" class="form-control" @bind="newTicket.Capacity" />
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Description</label>
+                    <input class="form-control" @bind="newTicket.Description" />
+                </div>
+            </div>
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger mt-3">@errorMessage</div>
+            }
+            <div class="mt-3">
+                <button class="btn btn-primary" @onclick="CreateTicketType" disabled="@isSubmitting">
+                    @if (isSubmitting) { <span class="spinner-border spinner-border-sm me-2"></span> }
+                    Create
+                </button>
+                <button class="btn btn-secondary ms-2" @onclick="ToggleForm">Cancel</button>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Capacity</th>
+                <th>Available</th>
+                <th>Description</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (!ticketTypes.Any())
+            {
+                <tr>
+                    <td colspan="6" class="text-center">No ticket types created yet.</td>
+                </tr>
+            }
+            @foreach (var ticket in ticketTypes)
+            {
+                <tr>
+                    <td>@ticket.Name</td>
+                    <td>$@ticket.Price.ToString("F2")</td>
+                    <td>@ticket.Capacity</td>
+                    <td>@ticket.AvailableCount</td>
+                    <td>@(ticket.Description ?? "N/A")</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger" @onclick="() => DeleteTicketType(ticket.Id)">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public int EventId { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private List<TicketTypeResponse> ticketTypes = new();
+    private bool showForm;
+    private bool isSubmitting;
+    private string? errorMessage;
+    private NewTicketTypeModel newTicket = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTicketTypes();
+    }
+
+    private async Task LoadTicketTypes()
+    {
+        ticketTypes = await ApiClient.GetTicketTypesAsync(EventId);
+    }
+
+    private void ToggleForm()
+    {
+        showForm = !showForm;
+        if (showForm)
+        {
+            newTicket = new();
+            errorMessage = null;
+        }
+    }
+
+    private async Task CreateTicketType()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            var request = new CreateTicketTypeRequest(
+                newTicket.Name ?? "",
+                newTicket.Description,
+                newTicket.Price,
+                newTicket.Capacity,
+                null,
+                null
+            );
+
+            await ApiClient.CreateTicketTypeAsync(EventId, request);
+            await LoadTicketTypes();
+            await OnChanged.InvokeAsync();
+            ToggleForm();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private async Task DeleteTicketType(int ticketTypeId)
+    {
+        try
+        {
+            await ApiClient.DeleteTicketTypeAsync(EventId, ticketTypeId);
+            await LoadTicketTypes();
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+
+    private class NewTicketTypeModel
+    {
+        public string? Name { get; set; }
+        public string? Description { get; set; }
+        public decimal Price { get; set; } = 50m;
+        public int Capacity { get; set; } = 50;
+    }
+}

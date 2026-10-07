@@ -1,0 +1,90 @@
+@using EventRegistration.UI.Services
+@using EventRegistration.UI.Models
+@inject EventRegistrationApiClient ApiClient
+@rendermode InteractiveServer
+
+<div class="alert alert-info mb-4">
+    <i class="bi bi-info-circle"></i> Attendees are automatically added to the waitlist when ticket capacity is full during registration.
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5>Waitlist Queue</h5>
+    </div>
+    <div class="card-body">
+        @if (!waitlistEntries.Any())
+        {
+            <p class="text-muted">No one on the waitlist.</p>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Position</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Ticket Type</th>
+                            <th>Joined Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < waitlistEntries.Count; i++)
+                        {
+                            var entry = waitlistEntries[i];
+                            var ticketType = ticketTypes.FirstOrDefault(t => t.Id == entry.TicketTypeId);
+                            <tr>
+                                <td><span class="badge bg-primary">#@entry.Position</span></td>
+                                <td>@entry.FirstName @entry.LastName</td>
+                                <td>@entry.Email</td>
+                                <td>@(ticketType?.Name ?? "Unknown")</td>
+                                <td>@entry.JoinedDate.ToString("MMM dd, yyyy HH:mm")</td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-danger" @onclick="() => RemoveFromWaitlist(entry.Id)">
+                                        <i class="bi bi-trash"></i> Remove
+                                    </button>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public int EventId { get; set; }
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    private List<WaitlistEntryResponse> waitlistEntries = new();
+    private List<TicketTypeResponse> ticketTypes = new();
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        waitlistEntries = await ApiClient.GetWaitlistAsync(EventId);
+        ticketTypes = await ApiClient.GetTicketTypesAsync(EventId);
+    }
+
+    private async Task RemoveFromWaitlist(int entryId)
+    {
+        try
+        {
+            await ApiClient.RemoveFromWaitlistAsync(entryId);
+            await LoadData();
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+    }
+}

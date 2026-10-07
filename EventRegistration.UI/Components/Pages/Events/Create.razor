@@ -1,0 +1,160 @@
+@page "/events/create"
+@using EventRegistration.UI.Services
+@using EventRegistration.UI.Models
+@inject EventRegistrationApiClient ApiClient
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Create Event</PageTitle>
+
+<div class="container mt-4">
+    <h1>Create New Event</h1>
+
+    <div class="card">
+        <div class="card-body">
+            <EditForm Model="@model" OnValidSubmit="HandleSubmit">
+                <DataAnnotationsValidator />
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Event Name *</label>
+                        <InputText class="form-control" @bind-Value="model.Name" placeholder="Enter event name" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Status *</label>
+                        <InputSelect class="form-select" @bind-Value="model.Status">
+                            <option value="Draft">Draft</option>
+                            <option value="Published">Published</option>
+                            <option value="Cancelled">Cancelled</option>
+                            <option value="Completed">Completed</option>
+                        </InputSelect>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <InputTextArea class="form-control" @bind-Value="model.Description" rows="3" placeholder="Enter event description" />
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Venue Name</label>
+                        <InputText class="form-control" @bind-Value="model.VenueName" placeholder="Enter venue name" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Venue Address</label>
+                        <InputText class="form-control" @bind-Value="model.VenueAddress" placeholder="Enter venue address" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Start Date & Time *</label>
+                        <InputDate Type="InputDateType.DateTimeLocal" class="form-control" @bind-Value="model.StartDate" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">End Date & Time *</label>
+                        <InputDate Type="InputDateType.DateTimeLocal" class="form-control" @bind-Value="model.EndDate" />
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Overall Capacity *</label>
+                        <InputNumber class="form-control" @bind-Value="model.OverallCapacity" placeholder="Enter capacity" />
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">Registration Deadline</label>
+                        <InputDate Type="InputDateType.DateTimeLocal" class="form-control" @bind-Value="model.RegistrationDeadline" />
+                    </div>
+                </div>
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-danger">@errorMessage</div>
+                }
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary" disabled="@isSubmitting">
+                        @if (isSubmitting)
+                        {
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                        }
+                        Create Event
+                    </button>
+                    <button type="button" class="btn btn-secondary" @onclick="Cancel">Cancel</button>
+                </div>
+            </EditForm>
+        </div>
+    </div>
+</div>
+
+@code {
+    private CreateEventModel model = new()
+    {
+        StartDate = DateTime.Now.AddMonths(1),
+        EndDate = DateTime.Now.AddMonths(1).AddDays(1),
+        OverallCapacity = 100,
+        Status = "Draft"
+    };
+
+    private bool isSubmitting;
+    private string? errorMessage;
+
+    private async Task HandleSubmit()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            var request = new CreateEventRequest(
+                model.Name ?? "",
+                model.Description,
+                model.VenueName,
+                model.VenueAddress,
+                model.StartDate,
+                model.EndDate,
+                model.OverallCapacity,
+                model.RegistrationDeadline,
+                model.Status ?? "Draft"
+            );
+
+            var result = await ApiClient.CreateEventAsync(request);
+            if (result != null)
+            {
+                Navigation.NavigateTo($"/events/{result.Id}");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error creating event: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/events");
+    }
+
+    private class CreateEventModel
+    {
+        public string? Name { get; set; }
+        public string? Description { get; set; }
+        public string? VenueName { get; set; }
+        public string? VenueAddress { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public int OverallCapacity { get; set; }
+        public DateTime? RegistrationDeadline { get; set; }
+        public string? Status { get; set; }
+    }
+}

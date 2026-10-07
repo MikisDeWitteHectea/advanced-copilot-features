@@ -1,0 +1,161 @@
+@using EventRegistration.UI.Services
+@using EventRegistration.UI.Models
+@using System.Text
+@inject EventRegistrationApiClient ApiClient
+@inject IJSRuntime JSRuntime
+@rendermode InteractiveServer
+
+<div class="card">
+    <div class="card-header">
+        <h5>Export Attendee Data</h5>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">Export the list of registered attendees in various formats.</p>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-6">
+                <label class="form-label">Export Format</label>
+                <select class="form-select" @bind="selectedFormat">
+                    <option value="csv">CSV (Comma-Separated Values)</option>
+                    <option value="excel">Excel (XLSX)</option>
+                    <option value="json">JSON</option>
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Sort By</label>
+                <select class="form-select" @bind="sortBy">
+                    <option value="">Default (Registration Date)</option>
+                    <option value="lastName">Last Name</option>
+                    <option value="email">Email</option>
+                    <option value="ticketType">Ticket Type</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label">Filter by Status</label>
+            <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check" name="statusFilter" id="status-all" value="" @onchange="@(() => statusFilter = "")" checked="@(string.IsNullOrEmpty(statusFilter))" />
+                <label class="btn btn-outline-primary" for="status-all">All</label>
+
+                <input type="radio" class="btn-check" name="statusFilter" id="status-confirmed" value="Confirmed" @onchange="@(() => statusFilter = "Confirmed")" checked="@(statusFilter == "Confirmed")" />
+                <label class="btn btn-outline-success" for="status-confirmed">Confirmed</label>
+
+                <input type="radio" class="btn-check" name="statusFilter" id="status-cancelled" value="Cancelled" @onchange="@(() => statusFilter = "Cancelled")" checked="@(statusFilter == "Cancelled")" />
+                <label class="btn btn-outline-danger" for="status-cancelled">Cancelled</label>
+
+                <input type="radio" class="btn-check" name="statusFilter" id="status-waitlisted" value="Waitlisted" @onchange="@(() => statusFilter = "Waitlisted")" checked="@(statusFilter == "Waitlisted")" />
+                <label class="btn btn-outline-warning" for="status-waitlisted">Waitlisted</label>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger">@errorMessage</div>
+        }
+
+        @if (!string.IsNullOrEmpty(successMessage))
+        {
+            <div class="alert alert-success">@successMessage</div>
+        }
+
+        <button class="btn btn-primary btn-lg" @onclick="ExportData" disabled="@isExporting">
+            @if (isExporting)
+            {
+                <span class="spinner-border spinner-border-sm me-2"></span>
+            }
+            else
+            {
+                <i class="bi bi-download me-2"></i>
+            }
+            Export @selectedFormat.ToUpper()
+        </button>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">
+        <h5>Export Information</h5>
+    </div>
+    <div class="card-body">
+        <h6>Available Formats:</h6>
+        <ul>
+            <li><strong>CSV:</strong> Compatible with spreadsheet applications like Excel, Google Sheets, and most database tools. Best for simple data import/export.</li>
+            <li><strong>Excel:</strong> Native Microsoft Excel format (.xlsx) with proper formatting and structure. Best for complex data analysis and reporting.</li>
+            <li><strong>JSON:</strong> Machine-readable format suitable for APIs and programmatic data processing. Best for developers and system integration.</li>
+        </ul>
+
+        <h6 class="mt-3">Exported Fields:</h6>
+        <div class="row">
+            <div class="col-md-6">
+                <ul>
+                    <li>First Name</li>
+                    <li>Last Name</li>
+                    <li>Email Address</li>
+                    <li>Phone Number</li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <ul>
+                    <li>Ticket Type</li>
+                    <li>Registration Status</li>
+                    <li>Total Amount Paid</li>
+                    <li>Registration Date</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public int EventId { get; set; }
+
+    private string selectedFormat = "csv";
+    private string sortBy = "";
+    private string statusFilter = "";
+    private bool isExporting;
+    private string? errorMessage;
+    private string? successMessage;
+
+    private async Task ExportData()
+    {
+        isExporting = true;
+        errorMessage = null;
+        successMessage = null;
+
+        try
+        {
+            var data = await ApiClient.ExportAttendeesAsync(EventId, selectedFormat, statusFilter, sortBy);
+
+            var fileName = $"event-{EventId}-attendees-{DateTime.Now:yyyyMMdd-HHmmss}.{GetFileExtension(selectedFormat)}";
+            var mimeType = GetMimeType(selectedFormat);
+
+            // Download file using JavaScript interop
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, mimeType, data);
+
+            successMessage = $"Export completed successfully! File downloaded as {fileName}";
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Export failed: {ex.Message}";
+        }
+        finally
+        {
+            isExporting = false;
+        }
+    }
+
+    private string GetFileExtension(string format) => format switch
+    {
+        "excel" => "xlsx",
+        "json" => "json",
+        _ => "csv"
+    };
+
+    private string GetMimeType(string format) => format switch
+    {
+        "excel" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "json" => "application/json",
+        _ => "text/csv"
+    };
+}

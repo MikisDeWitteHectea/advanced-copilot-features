@@ -1,0 +1,132 @@
+@page "/events/{EventId:int}"
+@using EventRegistration.UI.Services
+@using EventRegistration.UI.Models
+@inject EventRegistrationApiClient ApiClient
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Event Details</PageTitle>
+
+@if (eventData == null)
+{
+    <div class="text-center mt-5">
+        <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>@eventData.Name</h1>
+            <button class="btn btn-outline-secondary" @onclick="GoBack">
+                <i class="bi bi-arrow-left"></i> Back to Events
+            </button>
+        </div>
+
+        <!-- Tabs -->
+        <ul class="nav nav-tabs mb-4" role="tablist">
+            <li class="nav-item">
+                <button class="nav-link @(activeTab == "overview" ? "active" : "")" @onclick='() => activeTab = "overview"'>
+                    <i class="bi bi-info-circle"></i> Overview
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(activeTab == "tickets" ? "active" : "")" @onclick='() => activeTab = "tickets"'>
+                    <i class="bi bi-ticket"></i> Ticket Types
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(activeTab == "registrations" ? "active" : "")" @onclick='() => activeTab = "registrations"'>
+                    <i class="bi bi-people"></i> Registrations
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(activeTab == "capacity" ? "active" : "")" @onclick='() => activeTab = "capacity"'>
+                    <i class="bi bi-bar-chart"></i> Capacity
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(activeTab == "waitlist" ? "active" : "")" @onclick='() => activeTab = "waitlist"'>
+                    <i class="bi bi-hourglass"></i> Waitlist
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(activeTab == "discounts" ? "active" : "")" @onclick='() => activeTab = "discounts"'>
+                    <i class="bi bi-percent"></i> Discount Codes
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(activeTab == "policy" ? "active" : "")" @onclick='() => activeTab = "policy"'>
+                    <i class="bi bi-shield"></i> Cancellation Policy
+                </button>
+            </li>
+            <li class="nav-item">
+                <button class="nav-link @(activeTab == "export" ? "active" : "")" @onclick='() => activeTab = "export"'>
+                    <i class="bi bi-download"></i> Export
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content">
+            @if (activeTab == "overview")
+            {
+                <EventOverview Event="@eventData" />
+            }
+            else if (activeTab == "tickets")
+            {
+                <TicketTypesManager EventId="@EventId" OnChanged="@LoadData" />
+            }
+            else if (activeTab == "registrations")
+            {
+                <RegistrationsManager EventId="@EventId" TicketTypes="@ticketTypes" OnChanged="@LoadData" />
+            }
+            else if (activeTab == "capacity")
+            {
+                <CapacityView EventId="@EventId" />
+            }
+            else if (activeTab == "waitlist")
+            {
+                <WaitlistView EventId="@EventId" OnChanged="@LoadData" />
+            }
+            else if (activeTab == "discounts")
+            {
+                <DiscountCodesManager EventId="@EventId" TicketTypes="@ticketTypes" OnChanged="@LoadData" />
+            }
+            else if (activeTab == "policy")
+            {
+                <CancellationPolicyManager EventId="@EventId" />
+            }
+            else if (activeTab == "export")
+            {
+                <ExportView EventId="@EventId" />
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int EventId { get; set; }
+
+    private EventResponse? eventData;
+    private List<TicketTypeResponse> ticketTypes = new();
+    private string activeTab = "overview";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        eventData = await ApiClient.GetEventAsync(EventId);
+        ticketTypes = await ApiClient.GetTicketTypesAsync(EventId);
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/events");
+    }
+}
